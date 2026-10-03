@@ -16,6 +16,9 @@ as a Docker web service, with Postgres in their region. The browser-facing
 private-network address. ([Render web services](https://render.com/docs/web-services),
 [frontend configuration](frontend/lib/api-client.ts))
 
+**Railway is also viable.** Deploy the backend and frontend as separate Railway
+services; the Railway-specific setup is below. ([Railway monorepo deployments](https://docs.railway.com/deployments/monorepo))
+
 ## Deploy in this order
 
 1. **Create Render Postgres.** Choose the region where the API will run and copy
@@ -136,6 +139,60 @@ private-network address. ([Render web services](https://render.com/docs/web-serv
    ([Liveblocks Next.js access-token auth](https://liveblocks.io/docs/api-reference/authentication/access-token/nextjs),
    [Liveblocks authentication](https://liveblocks.io/docs/api-reference/authentication),
    [project auth route](frontend/app/api/liveblocks/auth/route.ts))
+
+## Railway deployment (alternative)
+
+Create two services from this repository. Railway supports monorepos by setting
+a separate **Root Directory** for each service. ([Railway monorepo deployments](https://docs.railway.com/deployments/monorepo))
+
+1. **Backend:** Add a Railway PostgreSQL service, then create a backend service
+   with **Root Directory** `/backend`, **Builder** `Dockerfile`, and
+   **Dockerfile Path** `/Dockerfile`. ([Railway monorepos](https://docs.railway.com/deployments/monorepo),
+   [Dockerfiles](https://docs.railway.com/builds/dockerfiles),
+   [PostgreSQL](https://docs.railway.com/databases/postgresql))
+
+   Set `DATABASE_URL` to the database URL using the `postgresql+asyncpg://`
+   scheme; set `CLERK_SECRET_KEY`, `ENVIRONMENT=production`, `DEV_AUTH=false`,
+   `CORS_ORIGINS` to the frontend's exact public origin, and `FRONTEND_URL` to
+   that origin without a trailing slash. Also set `PORT=8000`: the existing
+   Dockerfile binds Uvicorn to `0.0.0.0:8000`, while Railway otherwise injects
+   `PORT` for routing and health checks. Add optional provider/email variables
+   as needed. ([Railway variables](https://docs.railway.com/variables),
+   [Railway port binding](https://docs.railway.com/networking/troubleshooting/application-failed-to-respond),
+   [Railway health checks](https://docs.railway.com/deployments/healthchecks),
+   [SQLAlchemy asyncpg URL](https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#asyncpg),
+   [backend Dockerfile](backend/Dockerfile),
+   [backend settings](backend/app/config.py))
+
+   Set the health-check path to `/ready`, which checks database connectivity.
+   Railway activates a deployment after a `2xx` response but does not monitor
+   it continuously. Verify the public URL with
+   `curl.exe -fsS https://<backend-domain>/ready`; expect
+   `{"status":"ready"}`. ([Railway health checks](https://docs.railway.com/deployments/healthchecks),
+   [health endpoint](backend/app/main.py))
+
+2. **Frontend:** Create a second service with **Root Directory** `/frontend`.
+   Use detected Node settings, or set Build Command `npm run build` and Start
+   Command `npm start -- --hostname 0.0.0.0 --port ${PORT-3000}` so Next.js
+   listens on Railway's port. ([Railway build and start commands](https://docs.railway.com/builds/build-and-start-commands),
+   [Next.js port binding](https://docs.railway.com/networking/troubleshooting/application-failed-to-respond),
+   [frontend scripts](frontend/package.json))
+
+   Configure `NEXT_PUBLIC_GHOST_API_URL` as the backend's public HTTPS URL,
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, server-only `CLERK_SECRET_KEY`,
+   `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY`, server-only `LIVEBLOCKS_SECRET_KEY`,
+   and `DEV_AUTH=false` / `NEXT_PUBLIC_DEV_AUTH=false`. Set `NEXT_PUBLIC_`
+   variables before the build. Generate public domains in each service's
+   Networking settings; the API URL can use
+   `https://${{backend.RAILWAY_PUBLIC_DOMAIN}}` (substitute the backend service
+   name). Set backend `CORS_ORIGINS` and `FRONTEND_URL` to the frontend domain.
+   ([Railway public networking](https://docs.railway.com/networking/public-networking),
+   [Railway reference variables](https://docs.railway.com/variables),
+   [Next.js environment variables](https://nextjs.org/docs/app/guides/environment-variables),
+   [frontend API configuration](frontend/lib/api-client.ts))
+
+   Keep Clerk webhooks disabled until the missing application setting
+   described in the Render API instructions is implemented and tested.
 
 ## Optional email and AI integrations
 
