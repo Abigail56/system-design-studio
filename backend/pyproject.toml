@@ -1,0 +1,38 @@
+[project]
+name = "ghost-api"
+version = "0.1.0"
+description = "Ghost AI backend: projects, collaboration permissions, AI orchestration"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    # [email] extra: app/schemas.py InviteCreate.email is EmailStr, and FastAPI's
+    # own OpenAPI model uses it. Without this the container dies on boot with
+    # "email-validator is not installed" while a local .venv installed ad-hoc
+    # works fine -- so it only breaks in the image.
+    "pydantic[email]>=2.9",
+    "pydantic-settings>=2.6",
+    "pyjwt[crypto]>=2.10",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "anyio>=4.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

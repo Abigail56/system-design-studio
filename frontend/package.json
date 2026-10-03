@@ -1,0 +1,33 @@
+{
+  "name": "ghost",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.9.8",
+    "@liveblocks/client": "^3.24.2",
+    "@liveblocks/node": "^3.24.2",
+    "@liveblocks/react": "^3.24.2",
+    "@prisma/client": "^7.10.0",
+    "@xyflow/react": "^12.12.0",
+    "next": "16.3.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.7",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

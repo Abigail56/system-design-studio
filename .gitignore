@@ -1,0 +1,20 @@
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+.venv/
+backend/.venv/
+frontend/node_modules/
+frontend/.next/
+**/__pycache__/
+**/.pytest_cache/
+
+# Local notes file contains credential-like assignments; keep out of source control.
+/KEYS.md
+
+# Unrelated Windows files at the workspace root.
+/Microsoft.Services.Store.winmd
+/nul

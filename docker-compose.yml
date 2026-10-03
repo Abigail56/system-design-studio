@@ -1,0 +1,81 @@
+# Local stack for Ghost AI.
+#
+#   docker compose up -d db      # just Postgres, for running tests from the host
+#   docker compose up            # Postgres + the API
+#
+# The API runs `alembic upgrade head` on boot, so the schema is created on first
+# start. The web app is not included: it runs on the host with `npm run dev` so
+# hot reload works, and only needs GHOST_API_URL pointed at http://localhost:8000.
+
+name: ghost
+
+# Host port for Postgres. Deliberately not 5432: a local Postgres install is a
+# common thing to already have running, and a port clash fails confusingly.
+# Docker still reports success while the other server keeps answering, so you
+# get "password authentication failed" from a database you never connected to.
+# 55432 is arbitrary but out of the way. Override with POSTGRES_PORT.
+# Inside the compose network the port is always 5432; only the host mapping
+# changes.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ghost
+      POSTGRES_PASSWORD: ghost
+      POSTGRES_DB: ghost
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits on this, so it must test the real thing: connecting as the
+      # app user, not just a running port.
+      test: ["CMD-SHELL", "pg_isready -U ghost -d ghost"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Compose only interpolates ${VAR} from the shell and the *project root* .env,
+    # so the keys in backend/.env never reached the container -- it booted with
+    # sk_test_placeholder and an empty JWKS URL. auth.py then falls back to the
+    # default clerk.com JWKS, which does not sign this instance's tokens, so
+    # every real request 401'd. env_file is what actually loads backend/.env.
+    # required: false keeps `docker compose up -d db` working before it exists.
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # Only the values that are container-specific live here, because
+      # `environment:` outranks `env_file:` -- anything listed here would win
+      # over backend/.env. Everything else (Clerk keys, JWKS URL, AI provider,
+      # CORS) comes from backend/.env via env_file above.
+      #
+      # Wins over env_file, which is why it must be repeated here: from inside
+      # the network the host is the service name, not localhost.
+      DATABASE_URL: postgresql+asyncpg://ghost:ghost@db:5432/ghost
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  pgdata:

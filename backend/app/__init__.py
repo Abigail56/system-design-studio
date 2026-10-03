@@ -1,0 +1,1 @@
+"""Ghost AI backend package."""

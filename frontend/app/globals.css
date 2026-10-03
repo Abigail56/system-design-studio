@@ -1,0 +1,398 @@
+@import "tailwindcss";
+
+/**
+ * Design tokens.
+ *
+ * Dark is the default because a canvas tool gets used for long sessions and a
+ * dark field makes the coloured component shapes read more clearly. Light is a
+ * genuine second palette, not an inversion: surfaces get warmer and borders get
+ * lighter so the same contrast ratios hold.
+ *
+ * Themes are selected by `data-theme` on <html>, which is set before first
+ * paint by the inline script in the root layout. Everything below routes
+ * through these variables, so a theme change is one attribute flip.
+ */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0d10;
+  --bg-raised: #111419;
+  --bg-overlay: #161a21;
+  --bg-inset: #0e1116;
+
+  --fg: #e8eaed;
+  --fg-muted: #9aa3af;
+  --fg-subtle: #6b7480;
+
+  --border: #222831;
+  --border-strong: #333c48;
+
+  --accent: #7c8cff;
+  --accent-hover: #93a0ff;
+  --accent-fg: #0b0d10;
+  --accent-soft: rgb(124 140 255 / 0.14);
+  --accent-ring: rgb(124 140 255 / 0.45);
+
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  --node-service: #38bdf8;
+  --node-database: #34d399;
+  --node-queue: #fbbf24;
+  --node-client: #c084fc;
+
+  /* Backdrop blur needs an alpha the browser can composite over the page. */
+  --chrome: rgb(11 13 16 / 0.72);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 18px 44px -10px rgb(0 0 0 / 0.6);
+  --inset-line: rgb(255 255 255 / 0.06);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #fafbfc;
+  --bg-raised: #ffffff;
+  --bg-overlay: #ffffff;
+  --bg-inset: #f4f5f7;
+
+  --fg: #14171a;
+  --fg-muted: #5c6470;
+  --fg-subtle: #8b93a1;
+
+  --border: #e4e7eb;
+  --border-strong: #cdd3db;
+
+  /* Darker than the dark-mode accent: a light background needs more ink. */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-fg: #ffffff;
+  --accent-soft: rgb(79 70 229 / 0.09);
+  --accent-ring: rgb(79 70 229 / 0.35);
+
+  --success: #059669;
+  --warning: #b45309;
+  --danger: #dc2626;
+
+  --node-service: #0284c7;
+  --node-database: #059669;
+  --node-queue: #d97706;
+  --node-client: #7c3aed;
+
+  --chrome: rgb(250 251 252 / 0.78);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow: 0 4px 12px -2px rgb(16 24 40 / 0.1);
+  --shadow-lg: 0 18px 44px -12px rgb(16 24 40 / 0.18);
+  --inset-line: rgb(16 24 40 / 0.04);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-overlay: var(--bg-overlay);
+  --color-bg-inset: var(--bg-inset);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.app-surface {
+  background:
+    radial-gradient(ellipse at 12% 0%, var(--accent-soft), transparent 34rem),
+    var(--bg);
+}
+
+.surface-card {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-raised) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
+.dashboard-shell {
+  --bg: #fbf8f3;
+  --bg-raised: #fffdf9;
+  --bg-overlay: #fffdf9;
+  --bg-inset: #f3eee6;
+  --fg: #29251f;
+  --fg-muted: #71685e;
+  --fg-subtle: #9b9084;
+  --border: #e9e1d6;
+  --border-strong: #d7cbbb;
+  --accent: #b95d3f;
+  --accent-hover: #98472f;
+  --accent-fg: #fffaf5;
+  --accent-soft: rgb(185 93 63 / 0.1);
+  --accent-ring: rgb(185 93 63 / 0.35);
+  --chrome: rgb(251 248 243 / 0.86);
+  --shadow-sm: 0 2px 8px rgb(61 44 27 / 0.045);
+  --shadow: 0 8px 24px -12px rgb(61 44 27 / 0.2);
+  --shadow-lg: 0 20px 44px -18px rgb(61 44 27 / 0.24);
+}
+
+.dashboard-page {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(185 93 63 / 0.08), transparent 34rem),
+    var(--bg);
+}
+
+.dashboard-page .editorial-heading {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.045em;
+}
+
+.workspace-shell {
+  --bg: #f7f5f1;
+  --bg-raised: #fffefa;
+  --bg-overlay: #fffefa;
+  --bg-inset: #f0ede7;
+  --fg: #292820;
+  --fg-muted: #6f6b61;
+  --fg-subtle: #979184;
+  --border: #e7e3da;
+  --border-strong: #d9d3c7;
+  --accent: #6255c7;
+  --accent-hover: #5144b5;
+  --accent-fg: #ffffff;
+  --accent-soft: rgb(98 85 199 / 0.1);
+  --accent-ring: rgb(98 85 199 / 0.36);
+  --success: #22846b;
+  --danger: #bf514b;
+  --chrome: rgb(255 254 250 / 0.9);
+  --shadow-sm: 0 2px 8px rgb(46 42 33 / 0.06);
+  --shadow: 0 8px 24px -12px rgb(46 42 33 / 0.18);
+  --shadow-lg: 0 18px 42px -16px rgb(46 42 33 / 0.2);
+}
+
+.workspace-shell > main {
+  background: var(--bg);
+}
+
+[data-theme="dark"] .dashboard-shell {
+  --bg: #171512;
+  --bg-raised: #201d19;
+  --bg-overlay: #26221d;
+  --bg-inset: #1b1916;
+  --fg: #f2ede5;
+  --fg-muted: #b8ada0;
+  --fg-subtle: #918679;
+  --border: #373128;
+  --border-strong: #51483c;
+  --accent: #e39a78;
+  --accent-hover: #efad8e;
+  --accent-fg: #211713;
+  --accent-soft: rgb(227 154 120 / 0.13);
+  --accent-ring: rgb(227 154 120 / 0.42);
+  --chrome: rgb(23 21 18 / 0.86);
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.16);
+  --shadow: 0 8px 24px -12px rgb(0 0 0 / 0.44);
+  --shadow-lg: 0 20px 44px -18px rgb(0 0 0 / 0.56);
+}
+
+[data-theme="dark"] .workspace-shell {
+  --bg: #191a1e;
+  --bg-raised: #202126;
+  --bg-overlay: #292a31;
+  --bg-inset: #1b1c21;
+  --fg: #eeedf2;
+  --fg-muted: #b1b0bb;
+  --fg-subtle: #858492;
+  --border: #353640;
+  --border-strong: #494a56;
+  --accent: #a69bf9;
+  --accent-hover: #b9b0ff;
+  --accent-fg: #1d1937;
+  --accent-soft: rgb(166 155 249 / 0.14);
+  --accent-ring: rgb(166 155 249 / 0.45);
+  --success: #67c9a8;
+  --danger: #f08a84;
+  --chrome: rgb(25 26 30 / 0.9);
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.2);
+  --shadow: 0 8px 24px -12px rgb(0 0 0 / 0.42);
+  --shadow-lg: 0 18px 42px -16px rgb(0 0 0 / 0.5);
+}
+
+[data-theme="dark"] .dashboard-page {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(227 154 120 / 0.1), transparent 34rem),
+    var(--bg);
+}
+
+/**
+ * Space Grotesk for headings, applied by element rather than by a utility at
+ * every call site, so a new heading is correct by default.
+ */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Anything machine-shaped: ids, technology tags, counts, code. */
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Tabular figures keep counts and timestamps from shifting as they change. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-ring);
+  color: var(--fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Thin scrollbars: both the canvas and the side panels scroll, and default
+   scrollbars dominate the UI. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
+  background-clip: content-box;
+}
+
+/* --- React Flow -----------------------------------------------------------
+   The library ships light-theme defaults that look broken on a dark canvas, so
+   its CSS variables are overridden. Restyling its DOM directly is far more
+   fragile across upgrades. */
+.react-flow {
+  --xy-background-color: var(--bg);
+  --xy-edge-stroke-default: var(--fg-subtle);
+  --xy-edge-stroke-selected-default: var(--accent);
+  --xy-connectionline-stroke-default: var(--accent);
+  --xy-attribution-background-color-default: transparent;
+  background: var(--bg);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--bg);
+  background: var(--fg-subtle);
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+/* Handles appear on hover so a resting canvas is not dotted with dots. */
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__handle:hover {
+  background: var(--accent);
+}
+
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node.dragging {
+  cursor: grabbing;
+}
+
+.react-flow__controls {
+  box-shadow: var(--shadow);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--bg-overlay);
+  border-color: var(--border);
+  fill: var(--fg-muted);
+  width: 26px;
+  height: 26px;
+  transition: background-color 120ms ease;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-inset);
+  fill: var(--fg);
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 12px;
+  max-height: 12px;
+}
+
+.react-flow__edge-textbg {
+  fill: var(--bg);
+}
+
+.react-flow__edge-text {
+  fill: var(--fg-muted);
+}
+
+.react-flow__selection,
+.react-flow__nodesselection-rect {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-ring);
+}
+
+/* React Flow draws its own dot grid; a CSS radial-gradient matches the canvas
+   background exactly, so it disappears instead of showing as a seam. */
+.react-flow__background {
+  background-color: transparent;
+}
