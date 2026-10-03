@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30",
+    "psycopg[binary]>=3.0",
     "alembic>=1.14",
     # [email] extra: app/schemas.py InviteCreate.email is EmailStr, and FastAPI's
     # own OpenAPI model uses it. Without this the container dies on boot with
