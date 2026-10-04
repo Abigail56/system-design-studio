@@ -6,11 +6,15 @@ import {
 } from "@/components/canvas/CanvasDocumentProvider";
 import { AiPanel } from "@/components/ai/AiPanel";
 import { CanvasSurface } from "@/components/canvas/CanvasSurface";
+import { SketchboardSurface } from "@/components/canvas/SketchboardSurface";
 import { MemberList } from "@/components/projects/MemberList";
 import { InviteMemberForm } from "@/components/projects/InviteMemberForm";
 import { InviteList } from "@/components/projects/InviteList";
 import type { CanvasState } from "@/lib/canvas";
 import type { ProjectDetail, ProjectInvite, Snapshot } from "@/lib/types";
+import Link from "next/link";
+
+export type WorkspaceView = "diagram" | "sketch";
 
 /**
  * The project workspace: canvas on the left, AI and people on the right.
@@ -22,6 +26,7 @@ import type { ProjectDetail, ProjectInvite, Snapshot } from "@/lib/types";
 export function CanvasWorkspace({
   projectId,
   project,
+  view,
   snapshots,
   invites,
   viewerId,
@@ -29,6 +34,7 @@ export function CanvasWorkspace({
 }: {
   projectId: string;
   project: ProjectDetail;
+  view: WorkspaceView;
   snapshots: Snapshot[];
   invites: ProjectInvite[];
   /** The signed-in user, so their own row can be marked "(you)". */
@@ -53,16 +59,30 @@ export function CanvasWorkspace({
                   {project.name}
                 </h1>
               </div>
-              <span className="hidden shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-[11px] font-medium text-[var(--fg-muted)] shadow-[var(--shadow-sm)] sm:inline-flex">
-                <span
-                  aria-hidden
-                  className={`size-2 rounded-full ${canWrite ? "bg-[var(--success)]" : "bg-[var(--accent)]"}`}
-                />
-                {canWrite ? "Collaborative canvas" : "View-only access"}
-              </span>
+              <nav
+                aria-label="Project workspace"
+                className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-1"
+              >
+                <WorkspaceTab
+                  href={`/projects/${projectId}`}
+                  active={view === "diagram"}
+                >
+                  Architecture
+                </WorkspaceTab>
+                <WorkspaceTab
+                  href={`/projects/${projectId}?view=sketch`}
+                  active={view === "sketch"}
+                >
+                  Sketchboard
+                </WorkspaceTab>
+              </nav>
             </div>
             <div className="h-[calc(100%-4rem)]">
-              <CanvasSurface projectId={projectId} snapshots={snapshots} />
+              {view === "diagram" ? (
+                <CanvasSurface projectId={projectId} snapshots={snapshots} />
+              ) : (
+                <SketchboardSurface projectId={projectId} canWrite={canWrite} />
+              )}
             </div>
           </div>
 
@@ -78,6 +98,30 @@ export function CanvasWorkspace({
         </div>
       </CanvasDocumentProvider>
     </CanvasDocumentBoundary>
+  );
+}
+
+function WorkspaceTab({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+        active
+          ? "bg-[var(--bg-raised)] text-[var(--fg)] shadow-[var(--shadow-sm)]"
+          : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 

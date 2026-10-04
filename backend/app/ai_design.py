@@ -45,12 +45,23 @@ Rules:
 - "type" must be one of: service, database, queue, client.
 - Every "id" must be unique across nodes AND edges.
 - Every edge's "source" and "target" must be the id of a node in "nodes".
-- "position" is in pixels. Lay out left to right by request flow, with at least
-  260px between columns and 160px between rows so nothing overlaps.
-- Keep it to the components that actually matter. Prefer 6 to 15 nodes.
-- "label" is a short human name. "tech" is the concrete technology if there is
-  an obvious one, otherwise omit it. "description" is one clause.
-- Edge "label" is a short verb phrase: "reads", "writes", "publishes", "calls".
+- Positions are placeholders; the application lays out the graph automatically.
+- Model a complete, coherent design, not a list of technologies. Usually include
+  6–12 purposeful components: user/client entry points, API or application
+  services, the primary data stores, and only the queues, caches, search,
+  identity, or external integrations the stated requirements need.
+- Show the main request/data flow with edges. Add failure-sensitive paths
+  (asynchronous work, cache, search, payments, notifications) only when relevant.
+  Edges must describe the interaction with a concise verb phrase.
+- Separate responsibilities instead of combining unrelated domains into one
+  generic service. Do not duplicate a component or invent requirements.
+- Use concrete technologies only when explicitly requested or a reasonable
+  implementation choice; state responsibility and important constraints in
+  each concise description. Never imply a choice is mandatory if it is not.
+- Prefer a readable left-to-right flow from users to application services to
+  data stores or external dependencies. Keep labels short and unambiguous.
+- Return 6–15 nodes for a system of typical scope; use fewer for a genuinely
+  small system and more only when the request warrants it.
 """
 
 ERD_SYSTEM_PROMPT = """\
@@ -63,10 +74,20 @@ Return ONLY a JSON object with "nodes" and "edges". Each node must have a unique
 a concise cardinality label such as "1:N", "1:1", or "N:M".
 
 Model a sensible normalized relational schema from the request. Include primary
-keys, foreign keys, useful data types, and relationship cardinalities. Avoid
-inventing requirements not implied by the request. Use 4 to 12 entities when
-appropriate, and position them in a readable grid with at least 280px between
-columns and 180px between rows. Keep attribute names concise.
+keys, foreign keys, useful SQL data types, and relationship cardinalities.
+Every entity must have exactly one primary-key attribute unless a composite key
+is genuinely required; mark each foreign-key attribute as FK (or PK, FK when
+it is part of a composite key). Every FK must reference another entity and have
+a relationship edge. For many-to-many relationships, use an associative entity
+with both foreign keys rather than an N:M edge alone. Put relationship
+cardinality on the edge, from source to target, and keep edge direction
+consistent with the FK. Include audit timestamps or status fields only when
+useful. Avoid generic catch-all tables, duplicate entities, and attributes not
+supported by the request.
+
+Use 4–12 entities when appropriate, fewer for small domains. Give each entity a
+short purpose description and 4–10 important fields with realistic SQL types.
+Positions are placeholders; the application will arrange entities automatically.
 """
 
 SPEC_SYSTEM_PROMPT = """\
@@ -247,6 +268,64 @@ def validate_diagram(raw: dict[str, Any]) -> dict[str, Any]:
     return {"nodes": nodes, "edges": edges}
 
 
+def layout_diagram(state: dict[str, Any], diagram_type: str) -> dict[str, Any]:
+    """Apply a predictable, readable layout instead of trusting model coordinates."""
+    nodes = state["nodes"]
+    edges = state["edges"]
+    if diagram_type == "erd":
+        columns = min(3, max(1, len(nodes)))
+        row_counts = [(len(nodes) - column + columns - 1) // columns for column in range(columns)]
+        max_rows = max(row_counts, default=1)
+        for index, node in enumerate(nodes):
+            column = index % columns
+            row = index // columns
+            node["position"] = {
+                "x": column * 440,
+                "y": row * 420 + max(0, (max_rows - row_counts[column]) * 210),
+            }
+        return state
+
+    node_ids = [node["id"] for node in nodes]
+    incoming = {node_id: 0 for node_id in node_ids}
+    outgoing: dict[str, list[str]] = {node_id: [] for node_id in node_ids}
+    for edge in edges:
+        outgoing[edge["source"]].append(edge["target"])
+        incoming[edge["target"]] += 1
+
+    rank = {node_id: 0 for node_id in node_ids}
+    ready = [node_id for node_id in node_ids if incoming[node_id] == 0]
+    visited: set[str] = set()
+    while ready:
+        node_id = ready.pop(0)
+        visited.add(node_id)
+        for target in outgoing[node_id]:
+            rank[target] = max(rank[target], rank[node_id] + 1)
+            incoming[target] -= 1
+            if incoming[target] == 0:
+                ready.append(target)
+
+    # Cycles are valid in architecture diagrams. Put cyclic/unreachable nodes
+    # in a final layer rather than allowing a cycle to push nodes indefinitely.
+    if len(visited) < len(nodes):
+        next_rank = max(rank.values(), default=0) + 1
+        for node_id in node_ids:
+            if node_id not in visited:
+                rank[node_id] = next_rank
+
+    by_rank: dict[int, list[dict[str, Any]]] = {}
+    for node in nodes:
+        by_rank.setdefault(rank[node["id"]], []).append(node)
+
+    for column, group in by_rank.items():
+        group.sort(key=lambda node: (node["type"], node["id"]))
+        for row, node in enumerate(group):
+            node["position"] = {
+                "x": column * 360,
+                "y": row * 300 - (len(group) - 1) * 150,
+            }
+    return state
+
+
 def _describe_diagram(state: dict[str, Any]) -> str:
     """Render the diagram as text for the model to reason about."""
     lines = []
@@ -304,7 +383,7 @@ async def generate_diagram(
             f"and return the JSON diagram.\n\n"
             f"Request: {prompt}"
         ),
-        max_tokens=4000,
+        max_tokens=8000,
         json_mode=True,
     )
 
@@ -313,7 +392,7 @@ async def generate_diagram(
     except AIError as exc:
         raise ValidationError(str(exc)) from exc
 
-    diagram = validate_diagram(raw)
+    diagram = layout_diagram(validate_diagram(raw), diagram_type)
     log.info(
         "generated diagram: %d nodes, %d edges (%d prompt tokens)",
         len(diagram["nodes"]),

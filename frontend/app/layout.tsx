@@ -88,6 +88,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             signUpUrl="/sign-up"
             signInFallbackRedirectUrl="/projects"
             signUpFallbackRedirectUrl="/projects"
+            localization={{
+              signIn: {
+                start: {
+                  title: "Sign in to System Design Studio",
+                },
+              },
+            }}
           >
             {content}
           </ClerkProvider>

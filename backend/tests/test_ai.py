@@ -425,6 +425,54 @@ def test_validate_accepts_a_minimal_but_valid_diagram():
     assert result["nodes"][0]["data"]["label"] == "Q"
 
 
+def test_architecture_layout_follows_dependencies_and_separates_branches():
+    from app.ai_design import layout_diagram
+
+    state = {
+        "nodes": [
+            {"id": "db", "type": "database", "position": {"x": 0, "y": 0}},
+            {"id": "api", "type": "service", "position": {"x": 0, "y": 0}},
+            {"id": "web", "type": "client", "position": {"x": 0, "y": 0}},
+            {"id": "queue", "type": "queue", "position": {"x": 0, "y": 0}},
+        ],
+        "edges": [
+            {"id": "web-api", "source": "web", "target": "api"},
+            {"id": "api-db", "source": "api", "target": "db"},
+            {"id": "api-queue", "source": "api", "target": "queue"},
+        ],
+    }
+
+    result = layout_diagram(state, "architecture")
+    positions = {node["id"]: node["position"] for node in result["nodes"]}
+
+    assert positions["web"]["x"] < positions["api"]["x"]
+    assert positions["api"]["x"] < positions["db"]["x"]
+    assert positions["api"]["x"] < positions["queue"]["x"]
+    assert positions["db"]["x"] == positions["queue"]["x"]
+    assert positions["db"]["y"] != positions["queue"]["y"]
+
+
+def test_erd_layout_places_entities_in_a_spaced_grid():
+    from app.ai_design import layout_diagram
+
+    state = {
+        "nodes": [
+            {"id": f"entity-{index}", "type": "entity", "position": {"x": 0, "y": 0}}
+            for index in range(5)
+        ],
+        "edges": [],
+    }
+
+    result = layout_diagram(state, "erd")
+    positions = {node["id"]: node["position"] for node in result["nodes"]}
+
+    assert positions["entity-0"] == {"x": 0, "y": 0}
+    assert positions["entity-1"]["x"] == 440
+    assert positions["entity-2"]["x"] == 880
+    assert positions["entity-3"]["y"] > positions["entity-0"]["y"]
+    assert len(set((point["x"], point["y"]) for point in positions.values())) == 5
+
+
 def test_extract_json_ignores_code_fences_and_prose():
     from app.ai import extract_json
 

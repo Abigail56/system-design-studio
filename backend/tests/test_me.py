@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from tests.conftest import as_user
@@ -30,6 +32,17 @@ async def test_me_is_stable_across_calls(client):
     first = await client.get("/v1/me", headers=as_user("alice"))
     second = await client.get("/v1/me", headers=as_user("alice"))
     assert first.json() == second.json()
+
+
+async def test_concurrent_first_requests_create_one_user(concurrent_client):
+    first, second = await asyncio.gather(
+        concurrent_client.get("/v1/me", headers=as_user("alice")),
+        concurrent_client.get("/v1/me", headers=as_user("alice")),
+    )
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["user"]["id"] == second.json()["user"]["id"]
 
 
 async def test_me_distinguishes_callers(client):

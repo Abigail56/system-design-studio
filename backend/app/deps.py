@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ratelimit
@@ -51,13 +52,23 @@ async def current_user(
             name=profile.name,
             image_url=profile.image_url,
         )
-        session.add(user)
-        await session.flush()
-    else:
-        # Keep the local copy in step with Clerk.
-        user.email = profile.email
-        user.name = profile.name
-        user.image_url = profile.image_url
+        try:
+            async with session.begin_nested():
+                session.add(user)
+                await session.flush()
+        except IntegrityError:
+            # Two authenticated requests can provision the same new Clerk user
+            # at once. The unique Clerk ID constraint chooses the winner; after
+            # rolling back the savepoint, load that committed row and continue.
+            user = await session.scalar(select(User).where(User.clerk_id == clerk_id))
+            if user is None:
+                raise
+
+    # Keep the local copy in step with Clerk, including when another request
+    # created the row while this request was in flight.
+    user.email = profile.email
+    user.name = profile.name
+    user.image_url = profile.image_url
 
     await _redeem_invites(session, user)
     await session.commit()
