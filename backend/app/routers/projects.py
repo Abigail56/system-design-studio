@@ -143,12 +143,13 @@ async def get_project(
     user: CurrentUser,
 ) -> ProjectDetailEnvelope:
     project, role = await require_project(project_id, session, user)
+    owner = await session.get(User, project.owner_id)
 
     base = await _project_out(session, project, role)
     return ProjectDetailEnvelope(
         project=ProjectDetailOut(
             **base.project.model_dump(),
-            owner=UserBrief.model_validate(project.owner),
+            owner=UserBrief.model_validate(owner),
             members=await _members_of(session, project_id),
         )
     )

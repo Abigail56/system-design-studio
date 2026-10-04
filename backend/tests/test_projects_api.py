@@ -45,6 +45,35 @@ async def test_creator_becomes_owner_with_a_membership_row(client):
     assert len(detail.json()["project"]["members"]) == 1
 
 
+async def test_project_member_detail_loads_owner_in_a_fresh_session(client_factory, session):
+    from app.models import ProjectMember, Role, User
+
+    async with await client_factory(isolated=True) as isolated_client:
+        project = await create_project(isolated_client, user="owner_a")
+        editor = User(
+            clerk_id="editor_a",
+            email="editor_a@example.com",
+            name="Editor",
+        )
+        session.add(editor)
+        await session.flush()
+        session.add(
+            ProjectMember(
+                project_id=project["id"],
+                user_id=editor.id,
+                role=Role.EDITOR,
+            )
+        )
+        await session.commit()
+
+        detail = await isolated_client.get(
+            f"/v1/projects/{project['id']}", headers=as_user("editor_a")
+        )
+
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["project"]["owner"]["email"] == "owner_a@example.com"
+
+
 async def test_blank_name_is_rejected(client):
     response = await client.post(
         "/v1/projects", json={"name": "   "}, headers=as_user("owner_a")

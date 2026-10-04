@@ -1,7 +1,8 @@
 "use client";
 
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useClerk, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useState } from "react";
 
 /**
  * Clerk control buttons.
@@ -37,6 +38,8 @@ export function UserMenu() {
 
 function ClerkIdentity() {
   const { isLoaded, user } = useUser();
+  const { signOut } = useClerk();
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   // `isLoaded` matters: before Clerk resolves, `user` is null even for a signed
   // in visitor, which would flash the Sign in link on every page load.
@@ -55,5 +58,30 @@ function ClerkIdentity() {
     );
   }
 
-  return <UserButton />;
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={async () => {
+            setSignOutError(null);
+            try {
+              await signOut({ redirectUrl: "/sign-in" });
+            } catch {
+              setSignOutError("Could not sign out. Please try again.");
+            }
+          }}
+          className="text-xs text-[var(--fg-muted)] hover:text-[var(--fg)]"
+        >
+          Switch account
+        </button>
+        <UserButton />
+      </div>
+      {signOutError ? (
+        <span role="alert" className="text-xs text-[var(--danger)]">
+          {signOutError}
+        </span>
+      ) : null}
+    </div>
+  );
 }

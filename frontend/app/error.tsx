@@ -25,15 +25,19 @@ export default function ErrorBoundary({
         : status === 404
           ? "Not found"
           : status >= 500
-            ? "The API is unreachable"
-            : "Something went wrong";
+              ? error instanceof ApiError
+                ? "The API request failed"
+                : "Something went wrong"
+              : status === 0
+                ? "The API is unreachable"
+              : "Something went wrong";
 
   const detail =
     error instanceof ApiError
-      ? error.message
-      : status >= 500 && !(error instanceof ApiError)
-        ? "The backend did not respond. Check that the FastAPI service is running and GHOST_API_URL is correct."
-        : "An unexpected error occurred. Check the server logs for details.";
+        ? error.message
+        : status === 0
+          ? "The backend did not respond. Check that the FastAPI service is running and GHOST_API_URL is correct."
+          : "An unexpected error occurred. Check the server logs for details.";
 
   return (
     <div className="grid min-h-screen place-items-center px-6">

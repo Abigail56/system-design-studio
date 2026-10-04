@@ -123,6 +123,15 @@ services; the Railway-specific setup is below. ([Railway monorepo deployments](h
    redirect settings, and use those keys in both the frontend and API. ([Clerk
    production deployment](https://clerk.com/docs/guides/development/deployment/production),
    [Clerk environment variables](https://clerk.com/docs/guides/development/clerk-environment-variables))
+   Configure the Clerk instance to enable both Google and email/password
+   sign-in, require email verification for new or changed addresses, and
+   enforce multi-factor verification (for example, an email one-time code) on
+   sign-in. These are Clerk instance settings, not frontend-only switches; the
+   app renders Clerk's configured verification flow. The sign-in form also
+   requests Google's account chooser, and the user menu's **Switch account**
+   action signs out and returns to `/sign-in`. ([Clerk authentication
+   configuration](https://clerk.com/docs), [sign-in component](frontend/app/(auth)/ClerkAuthPage.tsx),
+   [account menu](frontend/components/layout/UserMenu.tsx))
    Set `CORS_ORIGINS` to the exact browser origin and `FRONTEND_URL` to the
    same base URL; add any deliberate Vercel preview origin explicitly rather
    than using a wildcard. ([API CORS configuration](backend/app/main.py),

@@ -46,7 +46,11 @@ export async function ClerkAuthPage({
 
   return (
     <main className="grid min-h-screen place-items-center px-6">
-      {mode === "sign-in" ? <SignIn /> : <SignUp />}
+      {mode === "sign-in" ? (
+        <SignIn oidcPrompt="select_account" />
+      ) : (
+        <SignUp />
+      )}
     </main>
   );
 }
